@@ -2,7 +2,8 @@ import os
 
 from .base import *  # noqa: F401,F403
 
-DEBUG = os.environ.get("DEBUG", "False").lower() in ("true", "1", "yes")
+# GEÇİCİ: Railway’de /api/v1/competitions/ 500 kök nedenini görmek için. Sorun çözülünce kaldırın veya env DEBUG kullanın.
+DEBUG = True
 
 
 def _env_list(key: str, default: list | None = None) -> list:
