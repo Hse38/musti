@@ -19,7 +19,7 @@ export function clearTokens() {
 async function refreshAccess(): Promise<string | null> {
   const r = localStorage.getItem("refresh_token");
   if (!r) return null;
-  const res = await fetch(`${API_BASE}/auth/refresh/`, {
+  const res = await fetch(`${API_BASE}/auth/jwt/refresh/`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ refresh: r }),

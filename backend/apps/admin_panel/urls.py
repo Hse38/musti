@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import views
+from . import mega_views, views
 
 urlpatterns = [
     path("dashboard/", views.AdminDashboardView.as_view(), name="admin-dashboard"),
@@ -52,4 +52,33 @@ urlpatterns = [
         name="admin-user-role",
     ),
     path("audit-logs/", views.AuditLogListView.as_view(), name="admin-audit"),
+    path("settings/site/", mega_views.SiteSettingsView.as_view(), name="admin-site-settings"),
+    path(
+        "competitions/<int:pk>/upload-participants/",
+        mega_views.CompetitionUploadParticipantsView.as_view(),
+        name="admin-upload-participants",
+    ),
+    path("faq/documents/", mega_views.FAQDocumentListCreateView.as_view(), name="admin-faq-docs"),
+    path(
+        "faq/escalations/",
+        mega_views.FAQEscalationListView.as_view(),
+        name="admin-faq-escalations",
+    ),
+    path(
+        "faq/escalations/<int:pk>/respond/",
+        mega_views.FAQEscalationRespondView.as_view(),
+        name="admin-faq-escalation-respond",
+    ),
+    path("languages/", mega_views.LanguageListCreateView.as_view(), name="admin-languages"),
+    path(
+        "languages/<str:code>/auto-translate/",
+        mega_views.LanguageAutoTranslateView.as_view(),
+        name="admin-language-auto-translate",
+    ),
+    path("reports/flights/", mega_views.AdminFlightReportView.as_view(), name="admin-report-flights"),
+    path(
+        "invoices/<int:pk>/status/",
+        mega_views.AdminInvoiceManualReviewView.as_view(),
+        name="admin-invoice-status",
+    ),
 ]

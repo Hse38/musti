@@ -15,6 +15,8 @@ DEBUG = os.environ.get("DEBUG", "False").lower() in ("true", "1", "yes")
 ALLOWED_HOSTS = [h.strip() for h in os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",") if h.strip()]
 
 INSTALLED_APPS = [
+    "daphne",
+    "channels",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -33,6 +35,12 @@ INSTALLED_APPS = [
     "apps.audit",
     "apps.kys",
     "apps.notifications",
+    "apps.transport",
+    "apps.invoices",
+    "apps.faq",
+    "apps.i18n_app",
+    "apps.portal",
+    "apps.realtime",
 ]
 
 MIDDLEWARE = [
@@ -66,6 +74,23 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "config.wsgi.application"
+ASGI_APPLICATION = "config.asgi.application"
+
+REDIS_URL = os.environ.get("REDIS_URL", "").strip()
+if REDIS_URL:
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels_redis.core.RedisChannelLayer",
+            "CONFIG": {"hosts": [REDIS_URL]},
+        },
+    }
+else:
+    CHANNEL_LAYERS = {
+        "default": {"BACKEND": "channels.layers.InMemoryChannelLayer"},
+    }
+
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:3000")
+ANTHROPIC_MODEL = os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-20250514")
 
 DATABASE_URL = os.environ.get("DATABASE_URL", "")
 if DATABASE_URL:

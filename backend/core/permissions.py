@@ -14,7 +14,7 @@ class IsOperator(BasePermission):
         u = request.user
         if not u or not u.is_authenticated:
             return False
-        return getattr(u, "role", None) in ("superadmin", "operator")
+        return getattr(u, "role", None) in ("superadmin", "operator", "admin")
 
 
 class IsViewerOrAbove(BasePermission):

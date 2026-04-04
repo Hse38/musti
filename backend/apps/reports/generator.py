@@ -3,6 +3,8 @@ from io import BytesIO
 import openpyxl
 from openpyxl.styles import Font, PatternFill
 
+from apps.transport.models import TransportRequest
+
 
 RESULT_COLUMNS = [
     {"key": "order", "label": "Sıra", "order": 1},
@@ -96,6 +98,45 @@ class ReportGenerator:
             }
             ws.append([row_data.get(col["key"], "") for col in columns])
 
+        return self._to_bytes(wb)
+
+    def generate_flight_report(self) -> bytes:
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Uçak"
+        headers = [
+            "Ad Soyad",
+            "TC",
+            "Takım ID",
+            "Kalkış / menşei",
+            "Varış tarihi",
+            "Dönüş tarihi",
+            "Uçuş notları",
+            "Durum",
+        ]
+        ws.append(headers)
+        self._style_header(ws)
+        qs = TransportRequest.objects.filter(transport_type="plane").select_related(
+            "participant",
+            "participant__team",
+        )
+        for tr in qs:
+            p = tr.participant
+            team_id = ""
+            if p.team:
+                team_id = p.team.team_id or p.team.team_code or ""
+            ws.append(
+                [
+                    p.full_name,
+                    p.tc_id or "",
+                    team_id,
+                    tr.origin_city,
+                    tr.preferred_arrival_date or "",
+                    tr.preferred_departure_date or "",
+                    tr.flight_notes,
+                    tr.get_status_display(),
+                ]
+            )
         return self._to_bytes(wb)
 
     def _build_result_row(self, sub, columns, order_idx: int, competition_name: str):
