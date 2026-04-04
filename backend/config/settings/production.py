@@ -1,9 +1,30 @@
 import os
 
+import dj_database_url
+from django.core.exceptions import ImproperlyConfigured
+
 from .base import *  # noqa: F401,F403
 
 # GEÇİCİ: Railway’de /api/v1/competitions/ 500 kök nedenini görmek için. Sorun çözülünce kaldırın veya env DEBUG kullanın.
 DEBUG = True
+
+# Railway / PostgreSQL: base.py’deki SQLite dalını ezer; URL’yi env’den oku (trim).
+_db_url = os.environ.get("DATABASE_URL")
+if _db_url:
+    _db_url = _db_url.strip()
+    os.environ["DATABASE_URL"] = _db_url
+
+DATABASES = {
+    "default": dj_database_url.config(
+        default=os.environ.get("DATABASE_URL"),
+        conn_max_age=600,
+    )
+}
+if not DATABASES["default"] or "ENGINE" not in DATABASES["default"]:
+    raise ImproperlyConfigured(
+        "DATABASE_URL tanımlı değil veya boş. Railway’de PostgreSQL servisini bağlayıp "
+        "DATABASE_URL ortam değişkeninin konteynıra enjekte edildiğini doğrulayın."
+    )
 
 
 def _env_list(key: str, default: list | None = None) -> list:
