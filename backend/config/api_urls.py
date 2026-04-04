@@ -1,9 +1,10 @@
 from django.urls import include, path
 
 urlpatterns = [
-    path("", include("apps.portal.urls")),
-    path("auth/", include("apps.accounts.urls")),
+    # Sabit yollar önce (boş önekli portal include'undan önce eşleşsin)
     path("competitions/", include("apps.competitions.urls")),
+    path("auth/", include("apps.accounts.urls")),
+    path("", include("apps.portal.urls")),
     path("sessions/", include("apps.tickets.urls")),
     path("admin/", include("apps.admin_panel.urls")),
     path("modules/kys/", include("apps.kys.urls")),
