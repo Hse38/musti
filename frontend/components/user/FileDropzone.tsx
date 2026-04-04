@@ -37,9 +37,11 @@ export function FileDropzone({
 
   return (
     <div>
-      <p className="text-base font-medium text-slate-800 dark:text-slate-100 mb-2">
-        {label}
-      </p>
+      {label ? (
+        <p className="text-base font-medium text-slate-800 dark:text-slate-100 mb-2">
+          {label}
+        </p>
+      ) : null}
       <button
         type="button"
         onClick={pick}

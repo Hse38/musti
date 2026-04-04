@@ -66,6 +66,8 @@ class ValidationEngine:
         return {"passed": True}
 
     def _rule_check_invoice_owner(self, submission, participant, competition, config):
+        if submission.invoice_drive_link and not submission.invoice_file:
+            return {"passed": True}
         if not submission.invoice_owner_name:
             return {"passed": False, "message": "Fatura sahibi bilgisi okunamadı"}
         parts = participant.full_name.split()
@@ -77,6 +79,8 @@ class ValidationEngine:
         return {"passed": True}
 
     def _rule_check_invoice_date(self, submission, participant, competition, config):
+        if submission.invoice_drive_link and not submission.invoice_file:
+            return {"passed": True}
         if not submission.invoice_date:
             return {"passed": False, "message": "Fatura tarihi okunamadı"}
         if competition and not (
@@ -92,6 +96,8 @@ class ValidationEngine:
         return {"passed": True}
 
     def _rule_check_duplicate(self, submission, participant, competition, config):
+        if participant is None:
+            return {"passed": True}
         duplicate = TicketSubmission.objects.filter(
             participant=participant,
             invoice_date=submission.invoice_date,
@@ -105,25 +111,35 @@ class ValidationEngine:
     def _rule_check_iban(self, submission, participant, competition, config):
         digital_wallets = config.get(
             "blocked_banks",
-            ["papara", "tosla", "paycell", "ininal", "hayat finans"],
+            ["papara", "tosla", "paycell", "ininal", "hayat finans", "param"],
         )
+        bank_lower = (participant.bank_name or "").lower()
+        if any(kw in bank_lower for kw in digital_wallets):
+            return {
+                "passed": False,
+                "message": f"IBAN dijital cüzdana ait olamaz ({participant.bank_name})",
+            }
         if participant.iban:
-            bank_lower = (participant.bank_name or "").lower()
-            if any(kw in bank_lower for kw in digital_wallets):
-                return {
-                    "passed": False,
-                    "message": f"IBAN dijital cüzdana ait olamaz ({participant.bank_name})",
-                }
             if not participant.iban.upper().startswith("TR"):
                 return {"passed": False, "message": "IBAN TR ile başlamalıdır"}
-        if participant.account_holder_name:
-            ah = participant.account_holder_name.lower()
-            full_lower = participant.full_name.lower()
-            parts = participant.full_name.split()
-            surname = parts[-1].lower() if parts else ""
-            if full_lower not in ah and surname not in ah:
-                return {
-                    "passed": False,
-                    "message": "Hesap sahibi katılımcı veya aynı soyadlı yakını olmalıdır",
-                }
-        return {"passed": True}
+
+        account_holder = (participant.account_holder_name or "").lower().strip()
+        if not account_holder:
+            return {"passed": False, "message": "Hesap sahibi adı boş"}
+
+        participant_name = participant.full_name.lower().strip()
+        participant_surname = participant_name.split()[-1] if participant_name else ""
+
+        if participant_name in account_holder or account_holder in participant_name:
+            return {"passed": True}
+
+        if participant_surname and participant_surname in account_holder:
+            return {"passed": True}
+
+        return {
+            "passed": False,
+            "message": (
+                f"IBAN sahibi ({participant.account_holder_name}) katılımcı adı veya "
+                f"soyadıyla eşleşmiyor"
+            ),
+        }

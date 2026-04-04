@@ -5,6 +5,7 @@ from django.core.management.base import BaseCommand
 
 from apps.admin_panel.models import ModuleConfig
 from apps.competitions.models import Competition, Participant, Team
+from apps.reports.generator import PAYMENT_COLUMNS, RESULT_COLUMNS
 from apps.validation.models import ReportTemplate, ValidationRule
 from core.module_registry import ModuleRegistry
 
@@ -123,23 +124,8 @@ class Command(BaseCommand):
                 },
             )
 
-        result_cols = [
-            {"key": "full_name", "label": "Katılımcı Adı", "order": 1},
-            {"key": "tc_id", "label": "TC Kimlik", "order": 2},
-            {"key": "team", "label": "Takım", "order": 3},
-            {"key": "transport_type", "label": "Ulaşım Tipi", "order": 4},
-            {"key": "status", "label": "Durum", "order": 5},
-            {"key": "errors", "label": "Hatalar", "order": 6},
-            {"key": "amount", "label": "Tutar", "order": 7},
-        ]
-        payment_cols = [
-            {"key": "account_holder_name", "label": "Hesap Sahibi", "order": 1},
-            {"key": "tc_id", "label": "TC Kimlik No", "order": 2},
-            {"key": "bank_name", "label": "Banka Adı", "order": 3},
-            {"key": "iban", "label": "IBAN", "order": 4},
-            {"key": "amount", "label": "Tutar (TL)", "order": 5},
-            {"key": "description", "label": "Açıklama", "order": 6},
-        ]
+        result_cols = RESULT_COLUMNS
+        payment_cols = PAYMENT_COLUMNS
         if not ReportTemplate.objects.filter(report_type="result", is_default=True).exists():
             ReportTemplate.objects.create(
                 name="Varsayılan Sonuç",
@@ -155,6 +141,44 @@ class Command(BaseCommand):
                 columns=payment_cols,
                 is_default=True,
                 created_by=u if u.pk else None,
+            )
+
+        competitions_seed = [
+            {
+                "name": "TEKNOFEST 2025 Savaşan İHA",
+                "slug": "savasan-iha-2025",
+                "start_date": "2025-09-01",
+                "end_date": "2025-09-07",
+            },
+            {
+                "name": "TEKNOFEST 2025 Akıllı Ulaşım",
+                "slug": "akilli-ulasim-2025",
+                "start_date": "2025-09-01",
+                "end_date": "2025-09-07",
+            },
+            {
+                "name": "TEKNOFEST 2025 Tarım",
+                "slug": "tarim-2025",
+                "start_date": "2025-09-01",
+                "end_date": "2025-09-07",
+            },
+            {
+                "name": "DENEME",
+                "slug": "deneme",
+                "start_date": "2025-01-01",
+                "end_date": "2025-12-31",
+            },
+        ]
+        for c in competitions_seed:
+            Competition.objects.get_or_create(
+                slug=c["slug"],
+                defaults={
+                    "name": c["name"],
+                    "start_date": c["start_date"],
+                    "end_date": c["end_date"],
+                    "max_supported_members": 5,
+                    "is_active": True,
+                },
             )
 
         comp, _ = Competition.objects.get_or_create(

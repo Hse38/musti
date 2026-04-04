@@ -4,6 +4,36 @@ import openpyxl
 from openpyxl.styles import Font, PatternFill
 
 
+RESULT_COLUMNS = [
+    {"key": "order", "label": "Sıra", "order": 1},
+    {"key": "competition", "label": "Yarışma Adı", "order": 2},
+    {"key": "first_name", "label": "Ad", "order": 3},
+    {"key": "last_name", "label": "Soyad", "order": 4},
+    {"key": "email", "label": "Email", "order": 5},
+    {"key": "phone", "label": "Telefon Numarası", "order": 6},
+    {"key": "tc_id", "label": "TC", "order": 7},
+    {"key": "transport_type", "label": "Ulaşım tipi", "order": 8},
+    {"key": "invoice_status", "label": "Fatura durumu", "order": 9},
+    {"key": "errors", "label": "Tespit edilen hatalar", "order": 10},
+    {"key": "decision", "label": "Nihai karar (Onay / Red)", "order": 11},
+    {"key": "rejection_reason", "label": "Red nedeni (varsa)", "order": 12},
+]
+
+PAYMENT_COLUMNS = [
+    {"key": "order", "label": "Sayı", "order": 1},
+    {"key": "account_holder_name", "label": "Hesap Sahibinin Adı-Soyadı", "order": 2},
+    {
+        "key": "account_holder_tc",
+        "label": "Hesap Sahibinin T.C. Kimlik Numarası",
+        "order": 3,
+    },
+    {"key": "bank_name", "label": "Banka Adı", "order": 4},
+    {"key": "iban", "label": "IBAN", "order": 5},
+    {"key": "amount", "label": "Tutar", "order": 6},
+    {"key": "description", "label": "Açıklama", "order": 7},
+]
+
+
 class ReportGenerator:
     GREEN = PatternFill("solid", fgColor="C6EFCE")
     RED = PatternFill("solid", fgColor="FFC7CE")
@@ -17,8 +47,13 @@ class ReportGenerator:
         ws.append([col["label"] for col in columns])
         self._style_header(ws)
 
-        for sub in session.submissions.select_related("participant__team"):
-            row = self._build_row(sub, columns)
+        subs = list(
+            session.submissions.select_related("participant__team").order_by("id")
+        )
+        comp_name = session.competition.name if session.competition else ""
+
+        for idx, sub in enumerate(subs, start=1):
+            row = self._build_result_row(sub, columns, idx, comp_name)
             ws.append(row)
             fill = self.GREEN if sub.status == "approved" else self.RED
             for cell in ws[ws.max_row]:
@@ -38,65 +73,86 @@ class ReportGenerator:
         ws.append([col["label"] for col in columns])
         self._style_header(ws)
 
-        comp_name = (
-            session.competition.name if session.competition else "TEKNOFEST"
-        )
-        for sub in approved:
+        comp = session.competition
+        comp_name = comp.name if comp else "TEKNOFEST"
+        year = comp.start_date.year if comp and comp.start_date else 2025
+
+        for idx, sub in enumerate(approved.order_by("id"), start=1):
             p = sub.participant
+            snap = sub.payment_form_snapshot or {}
             row_data = {
-                "account_holder_name": p.account_holder_name,
-                "tc_id": p.tc_id,
-                "bank_name": p.bank_name,
-                "iban": p.iban,
+                "order": idx,
+                "account_holder_name": (
+                    p.account_holder_name
+                    if p
+                    else snap.get("account_holder_name", "")
+                ),
+                "account_holder_tc": sub.account_holder_tc
+                or (p.tc_id if p else snap.get("account_holder_tc", "")),
+                "bank_name": (p.bank_name if p else snap.get("bank_name", "")),
+                "iban": (p.iban if p else snap.get("iban", "")),
                 "amount": float(sub.invoice_amount or 0),
-                "description": f"{comp_name} ulaşım desteği",
+                "description": f"TEKNOFEST {year} {comp_name} BİLET ÖDEMESİ",
             }
             ws.append([row_data.get(col["key"], "") for col in columns])
 
         return self._to_bytes(wb)
 
-    def _build_row(self, sub, columns):
+    def _build_result_row(self, sub, columns, order_idx: int, competition_name: str):
         p = sub.participant
-        team = p.team.name if p.team else ""
-        transport = p.get_transport_type_display() if hasattr(
-            p, "get_transport_type_display"
-        ) else p.transport_type
-        errors = "\n".join(sub.rejection_reasons or [])
+        snap = sub.payment_form_snapshot or {}
+        full = (
+            p.full_name
+            if p
+            else (snap.get("full_name") or "")
+        )
+        parts = full.split()
+        first_name = parts[0] if parts else ""
+        last_name = " ".join(parts[1:]) if len(parts) > 1 else ""
+
+        if p:
+            transport = p.get_transport_type_display()
+            email = p.email or ""
+            phone = p.phone or ""
+            tc = p.tc_id
+        else:
+            transport = snap.get("transport_type_declared", "") or ""
+            email = snap.get("email", "")
+            phone = snap.get("phone", "")
+            tc = snap.get("tc_id", "")
+
+        has_inv = bool(sub.invoice_file or sub.invoice_drive_link)
+        invoice_status = "Var" if has_inv else "Yok"
+        errs = "\n".join(sub.rejection_reasons or [])
+        decision = "Onay" if sub.status == "approved" else "Red"
+        rejection_reason = errs if sub.status == "rejected" else ""
+
         base = {
-            "full_name": p.full_name,
-            "tc_id": p.tc_id,
-            "team": team,
+            "order": order_idx,
+            "competition": competition_name,
+            "first_name": first_name,
+            "last_name": last_name,
+            "email": email,
+            "phone": phone,
+            "tc_id": tc,
             "transport_type": transport,
-            "status": "Onaylı" if sub.status == "approved" else "Reddedildi",
-            "errors": errors,
-            "amount": float(sub.invoice_amount) if sub.invoice_amount is not None else "",
+            "invoice_status": invoice_status,
+            "errors": errs,
+            "decision": decision,
+            "rejection_reason": rejection_reason,
         }
         return [base.get(col["key"], "") for col in columns]
 
     def _get_columns(self, report_type, template):
         if template and template.columns:
             cols = template.columns
-            if isinstance(cols, list) and cols and "order" in cols[0]:
-                return sorted(cols, key=lambda x: x.get("order", 0))
+            if isinstance(cols, list) and cols and isinstance(cols[0], dict):
+                if "order" in cols[0]:
+                    return sorted(cols, key=lambda x: x.get("order", 0))
             return cols
         defaults = {
-            "result": [
-                {"key": "full_name", "label": "Katılımcı Adı", "order": 1},
-                {"key": "tc_id", "label": "TC Kimlik", "order": 2},
-                {"key": "team", "label": "Takım", "order": 3},
-                {"key": "transport_type", "label": "Ulaşım Tipi", "order": 4},
-                {"key": "status", "label": "Durum", "order": 5},
-                {"key": "errors", "label": "Hatalar", "order": 6},
-                {"key": "amount", "label": "Tutar", "order": 7},
-            ],
-            "payment": [
-                {"key": "account_holder_name", "label": "Hesap Sahibi", "order": 1},
-                {"key": "tc_id", "label": "TC Kimlik No", "order": 2},
-                {"key": "bank_name", "label": "Banka Adı", "order": 3},
-                {"key": "iban", "label": "IBAN", "order": 4},
-                {"key": "amount", "label": "Tutar (TL)", "order": 5},
-                {"key": "description", "label": "Açıklama", "order": 6},
-            ],
+            "result": RESULT_COLUMNS,
+            "payment": PAYMENT_COLUMNS,
         }
         return sorted(defaults[report_type], key=lambda x: x["order"])
 

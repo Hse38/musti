@@ -38,12 +38,16 @@ class Participant(models.Model):
     full_name = models.CharField(max_length=255)
     tc_id = models.CharField(max_length=11)
     email = models.EmailField(blank=True)
+    phone = models.CharField(max_length=20, blank=True, default="")
     transport_type = models.CharField(max_length=20, choices=TRANSPORT_CHOICES)
     is_supported = models.BooleanField(default=False)
     iban = models.CharField(max_length=34, blank=True)
     bank_name = models.CharField(max_length=100, blank=True)
     account_holder_name = models.CharField(max_length=255, blank=True)
     kys_id = models.CharField(max_length=100, blank=True)
+    city_from = models.CharField(max_length=100, blank=True, default="")
+    city_to = models.CharField(max_length=100, blank=True, default="")
+    kys_member_id = models.CharField(max_length=50, blank=True, default="")
 
     class Meta:
         ordering = ["id"]
