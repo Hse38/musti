@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
+import { Inter } from "next/font/google";
 import "./globals.css";
 
+const inter = Inter({ subsets: ["latin", "latin-ext"], variable: "--font-inter" });
+
 export const metadata: Metadata = {
-  title: "TEKNOFEST Bilet Kontrol",
-  description: "Ulaşım faturası doğrulama ve raporlama",
+  title: "TEKNOFEST Ulaşım",
+  description: "Katılımcı ulaşım ve fatura portalı",
 };
 
 export default function RootLayout({
@@ -12,8 +15,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="tr">
-      <body className="font-sans antialiased">{children}</body>
+    <html suppressHydrationWarning className={inter.variable}>
+      <body className="min-h-dvh font-sans">{children}</body>
     </html>
   );
 }
