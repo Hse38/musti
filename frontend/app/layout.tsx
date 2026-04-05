@@ -5,8 +5,12 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin", "latin-ext"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
-  title: "TEKNOFEST Ulaşım",
-  description: "Katılımcı ulaşım ve fatura portalı",
+  title: "Ulaşım Destek Sistemi | TEKNOFEST",
+  description: "TEKNOFEST katılımcı ulaşım ve fatura portalı",
+  icons: {
+    icon: "/analogo.png",
+    apple: "/analogo.png",
+  },
 };
 
 export default function RootLayout({

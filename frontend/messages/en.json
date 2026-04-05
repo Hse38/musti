@@ -32,6 +32,17 @@
     "magicHint": "Paste the magic token from your email (or API response in dev).",
     "error": "Sign-in failed"
   },
+  "LoginHub": {
+    "title": "Transport Support System",
+    "participantCta": "Participant sign-in",
+    "adminCta": "Management",
+    "magicCta": "Sign in with email",
+    "back": "Back",
+    "participantTitle": "National ID & team",
+    "adminTitle": "Admin sign-in",
+    "magicTitle": "Magic link",
+    "adminError": "Sign-in failed"
+  },
   "Portal": {
     "title": "Travel flow",
     "steps": "Steps",

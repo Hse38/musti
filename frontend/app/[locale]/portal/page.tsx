@@ -46,7 +46,7 @@ export default function PortalPage() {
   const load = useCallback(async () => {
     const tok = getParticipantAccess();
     if (!tok) {
-      router.replace("/login");
+      router.replace("/");
       return;
     }
     setLoading(true);
@@ -58,7 +58,7 @@ export default function PortalPage() {
         apiFetch("/invoices/", {}, "participant"),
       ]);
       if (meRes.status === 401) {
-        router.replace("/login");
+        router.replace("/");
         return;
       }
       const me = await meRes.json();

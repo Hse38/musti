@@ -32,6 +32,17 @@
     "magicHint": "الصق الرمز من البريد أو من استجابة API في التطوير.",
     "error": "فشل الدخول"
   },
+  "LoginHub": {
+    "title": "نظام دعم النقل",
+    "participantCta": "دخول المشارك",
+    "adminCta": "الإدارة",
+    "magicCta": "الدخول بالبريد",
+    "back": "رجوع",
+    "participantTitle": "الهوية والفريق",
+    "adminTitle": "دخول المشرف",
+    "magicTitle": "رابط سحري",
+    "adminError": "فشل الدخول"
+  },
   "Portal": {
     "title": "سير النقل",
     "steps": "الخطوات",

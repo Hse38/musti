@@ -40,7 +40,11 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const t = useTranslations("Admin");
 
-  if (pathname?.includes("/admin/login")) {
+  if (
+    pathname?.includes("/admin/login") ||
+    pathname === "/admin" ||
+    pathname === "/admin/"
+  ) {
     return <>{children}</>;
   }
 

@@ -43,7 +43,7 @@ export function ParticipantHeader({
               size="sm"
               onClick={() => {
                 clearParticipantTokens();
-                router.push("/login");
+                router.push("/");
               }}
             >
               {t("logout")}

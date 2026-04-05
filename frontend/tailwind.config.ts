@@ -36,6 +36,16 @@ const config: Config = {
           foreground: "rgb(var(--muted-foreground) / <alpha-value>)",
         },
         accent: "rgb(var(--accent) / <alpha-value>)",
+        tf: {
+          bg: "var(--tf-bg)",
+          primary: "var(--tf-primary)",
+          accent: "var(--tf-accent)",
+          danger: "var(--tf-danger)",
+          warn: "var(--tf-warn)",
+          text: "var(--tf-text)",
+          glass: "var(--tf-glass)",
+          "glass-border": "var(--tf-glass-border)",
+        },
       },
       fontFamily: {
         sans: ["var(--font-inter)", "system-ui", "sans-serif"],

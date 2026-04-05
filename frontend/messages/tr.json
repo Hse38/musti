@@ -32,6 +32,17 @@
     "magicHint": "Sistem size gönderilen sihirli link token'ını yapıştırın (geliştirme ortamında API yanıtından alınır).",
     "error": "Giriş başarısız"
   },
+  "LoginHub": {
+    "title": "Ulaşım Destek Sistemi",
+    "participantCta": "Katılımcı girişi",
+    "adminCta": "Yönetim",
+    "magicCta": "E-posta ile giriş",
+    "back": "Geri",
+    "participantTitle": "TC kimlik ve takım",
+    "adminTitle": "Yönetici girişi",
+    "magicTitle": "Sihirli bağlantı",
+    "adminError": "Giriş başarısız"
+  },
   "Portal": {
     "title": "Ulaşım süreci",
     "steps": "Adımlar",

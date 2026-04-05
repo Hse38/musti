@@ -22,7 +22,7 @@ export default async function LocaleLayout({ children, params: { locale } }: Pro
 
   return (
     <NextIntlClientProvider messages={messages}>
-      <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+      <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
         <div
           lang={locale}
           dir={locale === "ar" ? "rtl" : "ltr"}
