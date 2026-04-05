@@ -14,12 +14,6 @@ def _env_list(key: str, default: list | None = None) -> list:
 
 
 CORS_ALLOWED_ORIGINS = _env_list("CORS_ALLOWED_ORIGINS", [])
-CORS_ALLOW_ALL_ORIGINS = os.environ.get("CORS_ALLOW_ALL_ORIGINS", "").lower() in (
-    "true",
-    "1",
-    "yes",
-)
-if not CORS_ALLOWED_ORIGINS:
-    CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_ALL_ORIGINS = True
 
 ALLOWED_HOSTS = _env_list("ALLOWED_HOSTS", ["*"])
