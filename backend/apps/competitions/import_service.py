@@ -1,3 +1,4 @@
+# v2 - no mail in launch
 import hashlib
 import uuid
 
