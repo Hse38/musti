@@ -113,10 +113,7 @@ def process_xlsx_upload(file_path: str, competition_id: int, *, actor=None):
                         [email],
                         fail_silently=True,
                     )
-                except Exception as e:
-                    import logging
-
-                    logging.getLogger(__name__).warning(f"Mail gönderilemedi: {e}")
+                except Exception:
                     ok = False
                 if ok:
                     sent += 1
