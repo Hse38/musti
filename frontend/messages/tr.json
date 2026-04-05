@@ -139,7 +139,7 @@
     "wizardDepartureEarliest": "En erken çıkış",
     "wizardDepartureLatest": "En geç çıkış",
     "wizardStart": "Başlat",
-    "wizardSummary": "{teams} takım, {participants} katılımcı eklendi, {emails} mail gönderildi.",
+    "wizardSummary": "{teams} takım, {participants} katılımcı eklendi. Sihirli linkleri yarışma sayfasından gönderin.",
     "wizardClose": "Kapat",
     "wizardHint": "Yarışma adı XLSX içindeki yarışma sütunundan alınır; yoksa otomatik isim verilir.",
     "liveFeed": "Canlı",

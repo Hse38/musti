@@ -124,20 +124,21 @@ class ParticipantResendMagicView(MegaAuthMixin, APIView):
 class CompetitionSendMagicLinksView(MegaAuthMixin, APIView):
     def post(self, request, pk):
         comp = get_object_or_404(Competition, pk=pk)
+        s = SiteSettings.load()
+        frontend = getattr(settings, "FRONTEND_URL", "http://localhost:3000").rstrip("/")
         sent = 0
         for p in Participant.objects.filter(team__competition=comp).select_related("team"):
             if not p.email or "@" not in p.email:
                 continue
             ensure_user_for_participant(p)
             p.refresh_from_db()
+            MagicLink.objects.filter(user=p.user, is_used=False).update(is_used=True)
             MagicLink.objects.filter(participant=p, is_used=False).update(is_used=True)
             link = MagicLink.objects.create(
                 user=p.user,
                 participant=p,
                 expires_at=timezone.now() + timedelta(hours=48),
             )
-            s = SiteSettings.load()
-            frontend = getattr(settings, "FRONTEND_URL", "http://localhost:3000").rstrip("/")
             magic_url = f"{frontend}/tr?magic_token={link.token}"
             body = s.magic_link_body.format(
                 name=p.full_name,
@@ -145,12 +146,23 @@ class CompetitionSendMagicLinksView(MegaAuthMixin, APIView):
                 competition=comp.name,
                 deadline=comp.end_date.isoformat() if comp.end_date else "—",
             )
-            if send_mail_via_site_settings(
-                s.magic_link_subject, body, [p.email], fail_silently=True
-            ):
+            try:
+                ok = send_mail_via_site_settings(
+                    s.magic_link_subject, body, [p.email], fail_silently=True
+                )
+            except Exception:
+                ok = False
+            if ok:
                 sent += 1
                 p.magic_link_sent_at = timezone.now()
                 p.save(update_fields=["magic_link_sent_at"])
+                log_action(
+                    user=request.user,
+                    action="magic_link_email_sent",
+                    target_type="participant",
+                    target_id=p.pk,
+                    new_value={"email": p.email},
+                )
         return Response({"emails_sent": sent})
 
 
@@ -201,7 +213,7 @@ class CompetitionUploadParticipantsView(MegaAuthMixin, APIView):
                 tmp.write(chunk)
             tmp.close()
             path = tmp.name
-        result = process_xlsx_upload(path, comp.id, actor=request.user)
+        result = process_xlsx_upload(path, comp.id)
         return Response(result)
 
 

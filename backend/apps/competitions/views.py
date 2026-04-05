@@ -104,7 +104,6 @@ class CompetitionLaunchView(APIView):
                 arrival_latest=al,
                 departure_earliest=de,
                 departure_latest=dl,
-                actor=request.user,
             )
         except ValueError as e:
             return Response({"detail": str(e)}, status=400)
@@ -123,7 +122,8 @@ class CompetitionLaunchView(APIView):
             **out,
             "message": (
                 f"Yarışma oluşturuldu: {out['teams_added']} takım, "
-                f"{out['participants_added']} katılımcı; {out['emails_sent']} e-posta gönderildi."
+                f"{out['participants_added']} katılımcı. "
+                "Sihirli link e-postaları için yarışma sayfasından 'Sihirli linkleri gönder' düğmesini kullanın."
             ),
         }
         return Response(payload, status=201)

@@ -4,17 +4,13 @@ import uuid
 from datetime import timedelta
 
 from django.contrib.auth import get_user_model
-from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 from django.utils.text import slugify
 
 from apps.accounts.models import MagicLink
-from apps.admin_panel.models import SiteSettings
 from apps.competitions.models import Competition, Participant, Team
 from apps.competitions.xlsx_parser import ParticipantXLSXParser
-from core.audit_log import log_action
-from core.mail_utils import send_mail_via_site_settings
 from core.participant_user import ensure_user_for_participant
 
 User = get_user_model()
@@ -29,14 +25,10 @@ def _tc_placeholder(team_id: int, full_name: str, email: str) -> str:
     return digits[:11]
 
 
-def process_xlsx_upload(file_path: str, competition_id: int, *, actor=None):
+def process_xlsx_upload(file_path: str, competition_id: int):
     data = ParticipantXLSXParser().parse(file_path)
     competition = Competition.objects.get(pk=competition_id)
-    settings_obj = SiteSettings.load()
-    sent = 0
     participants_saved = 0
-    frontend = getattr(settings, "FRONTEND_URL", "http://localhost:3000").rstrip("/")
-    deadline = competition.end_date.isoformat() if competition.end_date else ""
 
     for t in data.get("teams") or []:
         code_base = slugify(t["team_id"] or t["team_name"])[:40] or "takim"
@@ -93,44 +85,16 @@ def process_xlsx_upload(file_path: str, competition_id: int, *, actor=None):
             MagicLink.objects.filter(participant=participant, is_used=False).update(
                 is_used=True
             )
-            link = MagicLink.objects.create(
+            MagicLink.objects.create(
                 user=participant.user,
                 participant=participant,
                 expires_at=timezone.now() + timedelta(hours=48),
             )
-            magic_url = f"{frontend}/tr?magic_token={link.token}"
-            body = settings_obj.magic_link_body.format(
-                name=full_name,
-                link=magic_url,
-                competition=competition.name,
-                deadline=deadline or "—",
-            )
-            if email and "@" in email:
-                try:
-                    ok = send_mail_via_site_settings(
-                        settings_obj.magic_link_subject,
-                        body,
-                        [email],
-                        fail_silently=True,
-                    )
-                except Exception:
-                    ok = False
-                if ok:
-                    sent += 1
-                    participant.magic_link_sent_at = timezone.now()
-                    participant.save(update_fields=["magic_link_sent_at"])
-                    log_action(
-                        user=actor,
-                        action="magic_link_email_sent",
-                        target_type="participant",
-                        target_id=participant.pk,
-                        new_value={"email": email},
-                    )
 
     return {
         "teams": len(data.get("teams") or []),
         "participants": participants_saved,
-        "emails_sent": sent,
+        "emails_sent": 0,
     }
 
 
@@ -142,10 +106,10 @@ def launch_competition_from_xlsx(
     arrival_latest,
     departure_earliest,
     departure_latest,
-    actor=None,
 ):
     """
-    XLSX'ten yarışma + takımlar + katılımcılar oluşturur, magic link maillerini gönderir.
+    XLSX'ten yarışma + takımlar + katılımcılar oluşturur; magic link e-postaları için
+    POST /api/v1/admin/competitions/{id}/send-magic-links/ çağrılır.
     """
     data = ParticipantXLSXParser().parse(file_path)
     teams_data = data.get("teams") or []
@@ -184,7 +148,7 @@ def launch_competition_from_xlsx(
             max_supported_members=max_supported_members,
             is_active=True,
         )
-        result = process_xlsx_upload(file_path, comp.id, actor=actor)
+        result = process_xlsx_upload(file_path, comp.id)
 
     return {
         "competition_id": comp.id,

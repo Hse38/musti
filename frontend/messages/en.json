@@ -139,7 +139,7 @@
     "wizardDepartureEarliest": "Earliest departure",
     "wizardDepartureLatest": "Latest departure",
     "wizardStart": "Start",
-    "wizardSummary": "{teams} teams, {participants} participants added, {emails} emails sent.",
+    "wizardSummary": "{teams} teams, {participants} participants added. Send magic links from the competition detail page.",
     "wizardClose": "Close",
     "wizardHint": "Competition name is taken from the spreadsheet column if present; otherwise a name is generated.",
     "liveFeed": "Live",

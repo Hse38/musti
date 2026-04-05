@@ -185,7 +185,6 @@ export default function AdminCompetitionsPage() {
                     {t("wizardSummary", {
                       teams: done.teams_added,
                       participants: done.participants_added,
-                      emails: done.emails_sent,
                     })}
                   </p>
                   <Button
