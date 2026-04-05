@@ -33,3 +33,25 @@ class AdminPanelConfig(AppConfig):
             sender=self,
             dispatch_uid="admin_panel.post_migrate_seed",
         )
+        post_migrate.connect(
+            self._create_admin,
+            sender=self,
+            dispatch_uid="admin_panel.post_migrate_create_admin",
+        )
+
+    def _create_admin(self, sender, **kwargs):
+        import os
+
+        from django.contrib.auth import get_user_model
+
+        User = get_user_model()
+        try:
+            if not User.objects.filter(username="admin").exists():
+                User.objects.create_superuser(
+                    username="admin",
+                    email="admin@teknofest.org",
+                    password=os.environ.get("SEED_ADMIN_PASSWORD", "admin123"),
+                    role="superadmin",
+                )
+        except Exception:
+            pass
