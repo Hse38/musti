@@ -47,7 +47,8 @@ class ActiveCompetitionListView(generics.ListAPIView):
 class CompetitionLaunchView(APIView):
     """
     POST /api/v1/admin/competitions/launch/
-    XLSX + tarih pencereleri + destek kotası → yarışma, takımlar, katılımcılar ve magic link mailleri.
+    XLSX + tarih pencereleri + destek kotası → yarışma, takımlar, katılımcılar (e-posta yok).
+    Magic link mailleri: POST /api/v1/admin/competitions/{id}/send-magic-links/
     """
 
     authentication_classes = [JWTAuthentication, SessionAuthentication]

@@ -90,6 +90,7 @@ def process_xlsx_upload(file_path: str, competition_id: int):
                 participant=participant,
                 expires_at=timezone.now() + timedelta(hours=48),
             )
+            # E-posta gönderilmez; POST /api/v1/admin/competitions/{id}/send-magic-links/
 
     return {
         "teams": len(data.get("teams") or []),
