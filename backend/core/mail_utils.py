@@ -36,7 +36,7 @@ def send_mail_via_site_settings(
                 body,
                 from_email,
                 list(recipients),
-                fail_silently=False,
+                fail_silently=True,
             )
             return True
         except Exception as e:
