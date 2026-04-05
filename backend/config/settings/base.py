@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 
+import dj_database_url
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -91,7 +92,12 @@ else:
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:3000")
 ANTHROPIC_MODEL = os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-20250514")
 
-# DATABASES — development (yerel SQLite) veya production (DATABASE_URL / POSTGRES_URL) modülünde tanımlanır.
+DATABASES = {
+    "default": dj_database_url.config(
+        default="sqlite:///db.sqlite3",
+        conn_max_age=600,
+    )
+}
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
