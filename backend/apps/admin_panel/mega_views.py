@@ -12,8 +12,7 @@ from django.utils import timezone
 
 from apps.accounts.models import MagicLink
 from apps.admin_panel.models import SiteSettings
-from apps.audit.utils import write_audit
-from apps.competitions.import_service import launch_competition_from_xlsx, process_xlsx_upload
+from apps.competitions.import_service import process_xlsx_upload
 from apps.competitions.models import Competition, Participant
 from apps.faq.models import FAQConversation, FAQDocument
 from apps.i18n_app.models import Language, Translation
@@ -185,81 +184,6 @@ class CompetitionSendReminderView(MegaAuthMixin, APIView):
             if send_mail_via_site_settings(subj, body, [p.email], fail_silently=True):
                 sent += 1
         return Response({"reminders_sent": sent})
-
-
-class CompetitionLaunchFromXlsxView(MegaAuthMixin, APIView):
-    """Yeni yarışma: finalist XLSX + tarih pencereleri + destek kotası → içe aktar + magic mail."""
-
-    def post(self, request):
-        from datetime import datetime
-
-        f = request.FILES.get("file")
-        if not f:
-            return Response({"detail": "XLSX dosyası gerekli."}, status=400)
-
-        try:
-            max_sup = int(request.data.get("max_supported_members") or 0)
-        except (TypeError, ValueError):
-            max_sup = 0
-        if max_sup < 1:
-            return Response(
-                {"detail": "Desteklenecek kişi sayısı 1 veya daha büyük olmalı."},
-                status=400,
-            )
-
-        def pdate(key):
-            v = request.data.get(key)
-            if v is None or v == "":
-                return None
-            if hasattr(v, "year"):
-                return v
-            return datetime.strptime(str(v).strip()[:10], "%Y-%m-%d").date()
-
-        ae, al, de, dl = (
-            pdate("arrival_earliest"),
-            pdate("arrival_latest"),
-            pdate("departure_earliest"),
-            pdate("departure_latest"),
-        )
-        if None in (ae, al, de, dl):
-            return Response(
-                {"detail": "Dört tarih alanı da gerekli (YYYY-MM-DD)."},
-                status=400,
-            )
-
-        path = f.temporary_file_path() if hasattr(f, "temporary_file_path") else None
-        if not path:
-            import tempfile
-
-            tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx")
-            for chunk in f.chunks():
-                tmp.write(chunk)
-            tmp.close()
-            path = tmp.name
-
-        try:
-            out = launch_competition_from_xlsx(
-                path,
-                max_supported_members=max_sup,
-                arrival_earliest=ae,
-                arrival_latest=al,
-                departure_earliest=de,
-                departure_latest=dl,
-                actor=request.user,
-            )
-        except ValueError as e:
-            return Response({"detail": str(e)}, status=400)
-
-        write_audit(
-            request.user,
-            "competition.launch_xlsx",
-            "Competition",
-            str(out["competition_id"]),
-            None,
-            out,
-            request.META.get("REMOTE_ADDR"),
-        )
-        return Response(out, status=201)
 
 
 class CompetitionUploadParticipantsView(MegaAuthMixin, APIView):

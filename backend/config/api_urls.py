@@ -1,8 +1,15 @@
 from django.urls import include, path
 
+from apps.competitions.views import CompetitionLaunchView
+
 urlpatterns = [
     # Sabit yollar önce (boş önekli portal include'undan önce eşleşsin)
     path("competitions/", include("apps.competitions.urls")),
+    path(
+        "admin/competitions/launch/",
+        CompetitionLaunchView.as_view(),
+        name="admin-competition-launch",
+    ),
     path("auth/", include("apps.accounts.urls")),
     path("portal/", include("apps.portal.urls")),
     path("", include("apps.portal.urls")),
