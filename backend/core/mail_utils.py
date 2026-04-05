@@ -59,7 +59,7 @@ def send_mail_via_site_settings(
             to=list(recipients),
             connection=conn,
         )
-        msg.send(fail_silently=False)
+        msg.send(fail_silently=True)
         return True
     except Exception as e:
         logger.warning("SMTP send failed: %s", e, exc_info=True)
