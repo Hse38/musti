@@ -76,7 +76,7 @@ Her yarışma için farklı kurallar gerekebilir. Admin panelden kod deploy etme
 | Portal (JWT katılımcı) | `GET /api/v1/me/`, `GET /api/v1/me/status/`, `POST /api/v1/transport/select/`, `POST /api/v1/transport/plane-details/`, `POST /api/v1/transport/invoice-details/`, `POST /api/v1/invoices/upload/` — aynı yollar ` /api/v1/portal/...` önekiyle |
 | Yarışmalar (herkese açık) | `GET /api/v1/competitions/` |
 | Oturum | `POST /api/v1/sessions/` (multipart) |
-| Admin | `GET/PUT /api/v1/admin/settings/site/`, `GET /api/v1/admin/participants/?view=flat` veya `view=team`, `POST /api/v1/admin/participants/<id>/resend-link/`, `GET /api/v1/admin/invoices/`, `PATCH .../invoices/<id>/approve/`, `PATCH .../reject/`, raporlar: `.../reports/result/`, `payment/`, `flights/`, `tracking/?competition_id=` (JWT, operatör+) |
+| Admin | `POST /api/v1/admin/competitions/launch/` (multipart: `file`, `max_supported_members`, `arrival_*`, `departure_*` tarihleri), `GET/PUT /api/v1/admin/settings/site/`, `GET /api/v1/admin/participants/?view=flat` veya `view=team`, `POST /api/v1/admin/participants/<id>/resend-link/`, `GET /api/v1/admin/invoices/`, `PATCH .../invoices/<id>/approve/`, `PATCH .../reject/`, raporlar: `.../reports/result/`, `payment/`, `flights/`, `tracking/?competition_id=` (JWT, operatör+) |
 | WebSocket | `wss://.../ws/admin/notifications/`, katılımcı: `wss://.../ws/participant/<id>/` — mesaj gövdesi `{ "type", "data" }` |
 
 ---

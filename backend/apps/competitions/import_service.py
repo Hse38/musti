@@ -1,9 +1,11 @@
 import hashlib
+import uuid
 
 from datetime import timedelta
 
 from django.contrib.auth import get_user_model
 from django.conf import settings
+from django.db import transaction
 from django.utils import timezone
 from django.utils.text import slugify
 
@@ -32,6 +34,7 @@ def process_xlsx_upload(file_path: str, competition_id: int, *, actor=None):
     competition = Competition.objects.get(pk=competition_id)
     settings_obj = SiteSettings.load()
     sent = 0
+    participants_saved = 0
     frontend = getattr(settings, "FRONTEND_URL", "http://localhost:3000").rstrip("/")
     deadline = competition.end_date.isoformat() if competition.end_date else ""
 
@@ -84,6 +87,7 @@ def process_xlsx_upload(file_path: str, competition_id: int, *, actor=None):
             )
             ensure_user_for_participant(participant)
             participant.refresh_from_db()
+            participants_saved += 1
 
             MagicLink.objects.filter(user=user, is_used=False).update(is_used=True)
             MagicLink.objects.filter(participant=participant, is_used=False).update(
@@ -120,4 +124,69 @@ def process_xlsx_upload(file_path: str, competition_id: int, *, actor=None):
                         new_value={"email": email},
                     )
 
-    return {"teams": len(data.get("teams") or []), "emails_sent": sent}
+    return {
+        "teams": len(data.get("teams") or []),
+        "participants": participants_saved,
+        "emails_sent": sent,
+    }
+
+
+def launch_competition_from_xlsx(
+    file_path: str,
+    *,
+    max_supported_members: int,
+    arrival_earliest,
+    arrival_latest,
+    departure_earliest,
+    departure_latest,
+    actor=None,
+):
+    """
+    XLSX'ten yarışma + takımlar + katılımcılar oluşturur, magic link maillerini gönderir.
+    """
+    data = ParticipantXLSXParser().parse(file_path)
+    teams_data = data.get("teams") or []
+    if not teams_data:
+        raise ValueError("XLSX dosyasında takım veya katılımcı satırı bulunamadı.")
+
+    if arrival_earliest > arrival_latest or departure_earliest > departure_latest:
+        raise ValueError("Geliş veya çıkış tarih aralığı geçersiz.")
+    if arrival_earliest > departure_latest:
+        raise ValueError("En erken geliş, en geç çıkıştan sonra olamaz.")
+
+    name_src = (data.get("competition_name") or "").strip()
+    if not name_src:
+        name_src = f"Yarışma {timezone.localdate().isoformat()}"
+
+    start_date = arrival_earliest
+    end_date = departure_latest
+    year = start_date.year
+
+    base_slug = slugify(name_src)[:40] or "yarismalar"
+    slug = f"{base_slug}-{uuid.uuid4().hex[:8]}"
+    while Competition.objects.filter(slug=slug).exists():
+        slug = f"{base_slug}-{uuid.uuid4().hex[:8]}"
+
+    with transaction.atomic():
+        comp = Competition.objects.create(
+            name=name_src[:255],
+            slug=slug,
+            year=year,
+            start_date=start_date,
+            end_date=end_date,
+            arrival_earliest=arrival_earliest,
+            arrival_latest=arrival_latest,
+            departure_earliest=departure_earliest,
+            departure_latest=departure_latest,
+            max_supported_members=max_supported_members,
+            is_active=True,
+        )
+        result = process_xlsx_upload(file_path, comp.id, actor=actor)
+
+    return {
+        "competition_id": comp.id,
+        "competition_name": comp.name,
+        "teams_added": result["teams"],
+        "participants_added": result["participants"],
+        "emails_sent": result["emails_sent"],
+    }

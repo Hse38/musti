@@ -17,6 +17,11 @@ urlpatterns = [
     ),
     path("competitions/", views.CompetitionListCreateView.as_view(), name="admin-competitions"),
     path(
+        "competitions/launch/",
+        mega_views.CompetitionLaunchFromXlsxView.as_view(),
+        name="admin-competition-launch",
+    ),
+    path(
         "competitions/<int:pk>/",
         views.CompetitionDetailView.as_view(),
         name="admin-competition-detail",
