@@ -38,7 +38,7 @@ Yeni projede **Root Directory** olarak `frontend` seçin. Ortam değişkeni: `NE
 ### Railway (backend + PostgreSQL)
 
 - **Root Directory:** `backend`
-- **Pre-deploy command:** `bash setup.sh` (`migrate` + `create_admin`; ayrıca `backend/railway.toml` içinde tanımlı)
+- **Pre-deploy command (Railway UI):** `bash setup.sh` (`migrate` + `create_admin`)
 - **Start:** Dockerfile veya `gunicorn config.wsgi:application --bind 0.0.0.0:$PORT`
 - Ortam: `DATABASE_URL`, `SECRET_KEY`, `ALLOWED_HOSTS`, `CORS_ALLOWED_ORIGINS`, `ANTHROPIC_API_KEY`
 

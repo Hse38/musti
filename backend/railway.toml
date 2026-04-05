@@ -1,2 +1,0 @@
-[deploy]
-preDeployCommand = ["bash", "setup.sh"]
