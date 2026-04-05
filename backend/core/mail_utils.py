@@ -20,11 +20,13 @@ def send_mail_via_site_settings(
     *,
     fail_silently: bool = True,
 ) -> bool:
+    _ = fail_silently  # API uyumluluğu; gönderim hatalarında exception yükseltilmez
     s = SiteSettings.load()
     recipients = [e for e in to_emails if e and "@" in e]
     if not recipients:
         return False
     from_email = s.support_email or settings.DEFAULT_FROM_EMAIL
+
     if not s.smtp_host:
         try:
             from django.core.mail import send_mail
@@ -34,12 +36,13 @@ def send_mail_via_site_settings(
                 body,
                 from_email,
                 list(recipients),
-                fail_silently=fail_silently,
+                fail_silently=False,
             )
             return True
-        except Exception:
-            logger.exception("send_mail (console/default) failed")
-            return not fail_silently
+        except Exception as e:
+            logger.warning("send_mail (console/default) failed: %s", e, exc_info=True)
+            return False
+
     try:
         conn = get_connection(
             backend="django.core.mail.backends.smtp.EmailBackend",
@@ -56,10 +59,8 @@ def send_mail_via_site_settings(
             to=list(recipients),
             connection=conn,
         )
-        msg.send(fail_silently=fail_silently)
+        msg.send(fail_silently=False)
         return True
-    except Exception:
-        logger.exception("SMTP send failed")
-        if not fail_silently:
-            raise
+    except Exception as e:
+        logger.warning("SMTP send failed: %s", e, exc_info=True)
         return False
