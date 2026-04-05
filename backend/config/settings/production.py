@@ -1,3 +1,5 @@
+CORS_ALLOW_ALL_ORIGINS = True
+
 import os
 
 from . import base as _settings_base
