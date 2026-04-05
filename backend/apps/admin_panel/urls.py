@@ -1,5 +1,7 @@
 from django.urls import path
 
+from apps.competitions.views import CompetitionLaunchView
+
 from . import mega_views, views
 
 urlpatterns = [
@@ -14,6 +16,11 @@ urlpatterns = [
         "participants/<int:pk>/resend-link/",
         mega_views.ParticipantResendMagicView.as_view(),
         name="admin-participant-resend-link",
+    ),
+    path(
+        "competitions/launch/",
+        CompetitionLaunchView.as_view(),
+        name="competition-launch",
     ),
     path("competitions/", views.CompetitionListCreateView.as_view(), name="admin-competitions"),
     path(
