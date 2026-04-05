@@ -1,7 +1,10 @@
 import hashlib
+import logging
 import uuid
 
 from datetime import timedelta
+
+logger = logging.getLogger(__name__)
 
 from django.contrib.auth import get_user_model
 from django.conf import settings
@@ -106,12 +109,16 @@ def process_xlsx_upload(file_path: str, competition_id: int, *, actor=None):
                 deadline=deadline or "—",
             )
             if email and "@" in email:
-                ok = send_mail_via_site_settings(
-                    settings_obj.magic_link_subject,
-                    body,
-                    [email],
-                    fail_silently=True,
-                )
+                try:
+                    ok = send_mail_via_site_settings(
+                        settings_obj.magic_link_subject,
+                        body,
+                        [email],
+                        fail_silently=True,
+                    )
+                except Exception as e:
+                    logger.warning(f"Mail gönderilemedi: {e}")
+                    ok = False
                 if ok:
                     sent += 1
                     participant.magic_link_sent_at = timezone.now()
