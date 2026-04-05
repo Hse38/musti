@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "logos:manifest": "node scripts/list-logolar.mjs"
+    "logos:sync": "node scripts/sync-logolar.mjs"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.15",

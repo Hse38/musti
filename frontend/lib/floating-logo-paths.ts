@@ -1,6 +1,5 @@
 /**
  * Ek yüzen logo path'leri (manifest.json boşken veya tamamlayıcı olarak).
- * PNG'leri `public/LOGOLAR/` altına ekledikten sonra buraya veya manifest'e ekleyin;
- * `npm run logos:manifest` ile manifest üretebilirsiniz.
+ * Kaynak: `LOGOLAR/*.png` → `npm run logos:sync` ile `public/logolar/` kopyalanır.
  */
 export const FLOATING_LOGO_PATHS_FALLBACK: string[] = [];

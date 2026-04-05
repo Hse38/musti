@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { FLOATING_LOGO_PATHS_FALLBACK } from "@/lib/floating-logo-paths";
 
@@ -27,7 +26,7 @@ export function FloatingLogos() {
     let cancelled = false;
     void (async () => {
       try {
-        const res = await fetch("/LOGOLAR/manifest.json", { cache: "no-store" });
+        const res = await fetch("/logolar/manifest.json", { cache: "no-store" });
         if (!res.ok) return;
         const data = (await res.json()) as unknown;
         if (cancelled) return;
@@ -62,13 +61,13 @@ export function FloatingLogos() {
         const top = 4 + seeded(i, 1) * 78;
         const left = 2 + seeded(i, 2) * 88;
         const w = 36 + Math.floor(seeded(i, 3) * 48);
-        const opacity = 0.05 + seeded(i, 4) * 0.055;
+        const opacity = 0.06 + seeded(i, 4) * 0.06;
         const duration = 8 + seeded(i, 5) * 7;
         const delay = seeded(i, 6) * 6;
         return (
           <div
             key={`${src}-${i}`}
-            className="pointer-events-auto absolute transition duration-300 hover:z-10 hover:scale-[1.08] hover:opacity-[0.25]"
+            className="pointer-events-auto absolute transition duration-300 hover:z-10 hover:scale-[1.08] hover:opacity-[0.22]"
             style={{
               top: `${top}%`,
               left: `${left}%`,
@@ -79,14 +78,13 @@ export function FloatingLogos() {
               animationDelay: `${delay}s`,
             }}
           >
-            <Image
+            {/* eslint-disable-next-line @next/next/no-img-element -- çok sayıda küçük dekoratif logo; public statik dosya */}
+            <img
               src={src}
               alt=""
-              width={w}
-              height={w}
-              className="object-contain"
+              className="h-full w-full object-contain"
               loading="lazy"
-              sizes={`${w}px`}
+              decoding="async"
             />
           </div>
         );
