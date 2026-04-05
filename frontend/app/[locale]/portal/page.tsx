@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { motion } from "framer-motion";
 import { ParticipantHeader } from "@/components/layout/participant-header";
+import { PortalSubnav } from "@/components/participant/portal-subnav";
 import { FaqFloat } from "@/components/participant/faq-float";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -121,17 +122,20 @@ export default function PortalPage() {
   async function saveDetails() {
     setErr(null);
     let body: Record<string, string> = {};
+    let path = "/transport/details/";
     if (selType === "plane") {
       body = {
         preferred_arrival_date: dates.preferred_arrival_date,
         preferred_departure_date: dates.preferred_departure_date,
         flight_notes: dates.flight_notes,
       };
+      path = "/transport/plane-details/";
     } else if (selType === "bus" || selType === "train") {
       body = { ...bank };
+      path = "/transport/invoice-details/";
     }
     const res = await apiFetch(
-      "/transport/details/",
+      path,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -175,6 +179,11 @@ export default function PortalPage() {
   const detailsDone = steps.find((s) => s.key === "details")?.done;
   const invoiceDone = steps.find((s) => s.key === "invoice")?.done;
 
+  const ibanRisk = useMemo(() => {
+    const hay = `${bank.iban} ${bank.bank_name}`.toUpperCase();
+    return /PAPARA|TOSLA/.test(hay);
+  }, [bank.iban, bank.bank_name]);
+
   if (loading) {
     return (
       <>
@@ -202,6 +211,7 @@ export default function PortalPage() {
           <p className="text-sm text-muted-foreground">
             {(participant.full_name as string) ?? ""}
           </p>
+          <PortalSubnav className="mt-3" />
         </div>
 
         <div className="flex gap-2">
@@ -316,6 +326,11 @@ export default function PortalPage() {
                 )}
                 {(selType === "bus" || selType === "train") && (
                   <>
+                    {ibanRisk && (
+                      <p className="rounded-lg bg-amber-500/15 px-3 py-2 text-sm text-amber-800 dark:text-amber-200">
+                        {t("ibanWarning")}
+                      </p>
+                    )}
                     {(
                       [
                         ["origin_city", t("originCity")],

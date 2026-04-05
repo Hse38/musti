@@ -22,11 +22,11 @@ class ParticipantXLSXParser:
                         return i
             return None
 
-        ci = col("yarışma", "yarisma")
-        tni = col("takım", "takim", "team")
+        ci = col("yarışma", "yarisma", "competition")
+        tni = col("takım_adı", "takim_adi", "takım", "takim", "team_name", "team")
         tid = col("takım_id", "takim_id", "team_id")
-        ai = col("ad", "isim")
-        si = col("soyad")
+        ai = col("ad", "isim", "first_name")
+        si = col("soyad", "last_name")
         ei = col("email", "e-mail", "posta")
         ki = col("kaptan")
 

@@ -9,6 +9,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.accounts.models import MagicLink
 from apps.competitions.models import Participant
+from core.participant_user import ensure_user_for_participant
 from apps.faq.models import FAQConversation, FAQDocument
 from apps.invoices.models import Invoice
 from apps.realtime.consumers import broadcast_admin_sync, notify_participant_sync
@@ -33,7 +34,7 @@ class MagicLinkRequestView(APIView):
             return Response({"detail": "Kullanıcı bulunamadı."}, status=404)
         link = MagicLink.objects.create(
             user=user,
-            expires_at=timezone.now() + timedelta(hours=24),
+            expires_at=timezone.now() + timedelta(hours=48),
         )
         return Response({"ok": True, "token": str(link.token)})
 
@@ -52,9 +53,35 @@ class MagicLinkVerifyView(APIView):
         link = MagicLink.objects.filter(token=u, is_used=False).first()
         if not link or link.expires_at < timezone.now():
             return Response({"detail": "Token geçersiz veya süresi dolmuş"}, status=400)
+        auth_user = link.user
+        if link.participant_id:
+            auth_user = ensure_user_for_participant(link.participant)
+            if not link.user_id:
+                link.user = auth_user
+                link.save(update_fields=["user"])
+            p = link.participant
+            if p and not p.first_login_at:
+                p.first_login_at = timezone.now()
+                p.last_activity_at = timezone.now()
+                p.save(update_fields=["first_login_at", "last_activity_at"])
+        elif auth_user is None:
+            return Response({"detail": "Geçersiz bağlantı"}, status=400)
         link.is_used = True
         link.save(update_fields=["is_used"])
-        return Response(_tokens_for(link.user))
+        if link.participant_id:
+            broadcast_admin_sync(
+                {
+                    "type": "participant_login",
+                    "data": {
+                        "participant_name": link.participant.full_name,
+                        "team_name": link.participant.team.name
+                        if link.participant.team
+                        else "",
+                        "timestamp": timezone.now().isoformat(),
+                    },
+                }
+            )
+        return Response(_tokens_for(auth_user))
 
 
 class TCTeamLoginView(APIView):
@@ -70,7 +97,26 @@ class TCTeamLoginView(APIView):
         )
         if not p or not p.user:
             return Response({"detail": "Eşleşme yok"}, status=404)
-        return Response(_tokens_for(p.user))
+        now = timezone.now()
+        if not p.first_login_at:
+            p.first_login_at = now
+            p.last_activity_at = now
+            p.save(update_fields=["first_login_at", "last_activity_at"])
+        role = "captain" if (p.is_captain or p.user.role == "captain") else "participant"
+        broadcast_admin_sync(
+            {
+                "type": "participant_login",
+                "data": {
+                    "participant_name": p.full_name,
+                    "team_name": p.team.name if p.team else "",
+                    "timestamp": now.isoformat(),
+                },
+            }
+        )
+        data = _tokens_for(p.user)
+        data["role"] = role
+        data["participant_id"] = p.id
+        return Response(data)
 
 
 class MeView(APIView):
@@ -101,7 +147,7 @@ class MeStatusView(APIView):
         p = getattr(request.user, "participant_profile", None)
         if not p:
             return Response({"steps": []})
-        tr = getattr(p, "transport_request", None)
+        tr = TransportRequest.objects.filter(participant=p).first()
         steps = [
             {"key": "transport", "done": bool(tr)},
             {"key": "details", "done": tr and tr.status != "pending"},
@@ -127,8 +173,17 @@ class TransportSelectView(APIView):
         p.transport_type = {"plane": "plane", "bus": "bus", "train": "train", "self": "none"}.get(
             tt, "none"
         )
-        p.save(update_fields=["transport_type"])
-        notify_participant_sync(p.id, {"event": "transport_selected"})
+        now = timezone.now()
+        p.transport_selected_at = now
+        p.last_activity_at = now
+        p.save(update_fields=["transport_type", "transport_selected_at", "last_activity_at"])
+        notify_participant_sync(
+            p.id,
+            {
+                "type": "transport_selected",
+                "data": {"transport_type": tt},
+            },
+        )
         return Response({"ok": True, "transport_request_id": tr.id})
 
 
@@ -164,8 +219,59 @@ class TransportDetailsView(APIView):
         elif tr.transport_type == "self":
             tr.status = "self_noted"
         tr.save()
-        notify_participant_sync(p.id, {"event": "details_saved"})
+        now = timezone.now()
+        p.last_activity_at = now
+        p.save(update_fields=["last_activity_at"])
+        notify_participant_sync(
+            p.id,
+            {"type": "details_saved", "data": {}},
+        )
         return Response({"ok": True})
+
+
+class TransportPlaneDetailsView(APIView):
+    def post(self, request):
+        if not request.user.is_authenticated:
+            return Response(status=401)
+        p = getattr(request.user, "participant_profile", None)
+        if not p:
+            return Response(status=400)
+        tr = TransportRequest.objects.filter(participant=p).first()
+        if not tr or tr.transport_type != "plane":
+            return Response({"detail": "Uçak seçimi gerekli"}, status=400)
+        return TransportDetailsView().post(request)
+
+
+class TransportInvoiceDetailsView(APIView):
+    def post(self, request):
+        if not request.user.is_authenticated:
+            return Response(status=401)
+        p = getattr(request.user, "participant_profile", None)
+        if not p:
+            return Response(status=400)
+        tr = TransportRequest.objects.filter(participant=p).first()
+        if not tr or tr.transport_type not in ("bus", "train"):
+            return Response({"detail": "Otobüs veya tren seçimi gerekli"}, status=400)
+        iban = (request.data.get("iban") or "").replace(" ", "").upper()
+        bank_name = (request.data.get("bank_name") or "").upper()
+        blocked = ("PAPARA", "TOSLA")
+        hay = iban + bank_name
+        if any(x in hay for x in blocked):
+            return Response(
+                {
+                    "detail": (
+                        "Papara/Tosla veya benzeri ödeme kuruluşu IBAN’ı kabul edilmez; "
+                        "lütfen banka hesabı IBAN’ı girin."
+                    )
+                },
+                status=400,
+            )
+        if iban and len(iban) >= 15 and not iban.startswith("TR"):
+            return Response(
+                {"detail": "Türkiye için IBAN TR ile başlamalıdır."},
+                status=400,
+            )
+        return TransportDetailsView().post(request)
 
 
 class InvoiceUploadView(APIView):
@@ -210,13 +316,34 @@ class InvoiceUploadView(APIView):
             broadcast_admin_sync(
                 {
                     "type": "low_confidence",
-                    "invoice_id": inv.id,
-                    "participant": p.full_name,
+                    "data": {
+                        "invoice_id": inv.id,
+                        "participant_name": p.full_name,
+                        "team_name": p.team.name if p.team else "",
+                        "amount": float(inv.ai_extracted_amount or 0),
+                        "confidence": conf,
+                        "timestamp": timezone.now().isoformat(),
+                    },
                 }
             )
         inv.save()
+        now = timezone.now()
+        if not p.invoice_uploaded_at:
+            p.invoice_uploaded_at = now
+        p.last_activity_at = now
+        p.save(update_fields=["invoice_uploaded_at", "last_activity_at"])
         broadcast_admin_sync(
-            {"type": "new_invoice", "invoice_id": inv.id, "participant": p.full_name}
+            {
+                "type": "new_invoice",
+                "data": {
+                    "invoice_id": inv.id,
+                    "participant_name": p.full_name,
+                    "team_name": p.team.name if p.team else "",
+                    "amount": float(inv.ai_extracted_amount or 0),
+                    "confidence": conf,
+                    "timestamp": now.isoformat(),
+                },
+            }
         )
         return Response({"id": inv.id, "status": inv.status, "confidence": conf})
 
@@ -271,8 +398,12 @@ class FAQAskView(APIView):
             broadcast_admin_sync(
                 {
                     "type": "faq_escalation",
-                    "participant": p.full_name if p else "",
-                    "question": q,
+                    "data": {
+                        "participant_name": p.full_name if p else "",
+                        "question": q,
+                        "conversation_id": conv.id,
+                        "timestamp": timezone.now().isoformat(),
+                    },
                 }
             )
             return Response(
@@ -340,6 +471,12 @@ class CaptainUploadInvoiceView(APIView):
         p = Participant.objects.filter(pk=pid, team=cap.team).first()
         if not p:
             return Response({"detail": "Üye bulunamadı"}, status=404)
+        tr_existing = TransportRequest.objects.filter(participant=p).first()
+        if tr_existing and tr_existing.transport_type == "plane":
+            return Response(
+                {"detail": "Uçak seçimi yapan üye için fatura yüklenemez."},
+                status=400,
+            )
         f = request.FILES.get("invoice_file") or request.FILES.get("file")
         if not f:
             return Response({"detail": "Dosya gerekli"}, status=400)
@@ -353,6 +490,13 @@ class CaptainUploadInvoiceView(APIView):
             file=f,
         )
         broadcast_admin_sync(
-            {"type": "captain_upload", "invoice_id": inv.id, "for": p.full_name}
+            {
+                "type": "captain_upload",
+                "data": {
+                    "invoice_id": inv.id,
+                    "participant_name": p.full_name,
+                    "timestamp": timezone.now().isoformat(),
+                },
+            }
         )
         return Response({"id": inv.id})

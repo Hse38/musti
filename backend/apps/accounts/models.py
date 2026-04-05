@@ -29,7 +29,18 @@ class User(AbstractUser):
 
 class MagicLink(models.Model):
     user = models.ForeignKey(
-        "accounts.User", on_delete=models.CASCADE, related_name="magic_links"
+        "accounts.User",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="magic_links",
+    )
+    participant = models.ForeignKey(
+        "competitions.Participant",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="magic_links",
     )
     token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     is_used = models.BooleanField(default=False)
@@ -37,4 +48,4 @@ class MagicLink(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.user_id} — {self.token}"
+        return f"{self.token}"

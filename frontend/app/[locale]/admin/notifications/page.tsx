@@ -30,8 +30,14 @@ export default function AdminNotificationsPage() {
         ws.onopen = () => setStatus("ok");
         ws.onmessage = (ev) => {
           idRef.current += 1;
+          let raw = ev.data as string;
+          try {
+            raw = JSON.stringify(JSON.parse(raw), null, 2);
+          } catch {
+            /* keep as text */
+          }
           setItems((prev) => [
-            { id: idRef.current, raw: ev.data },
+            { id: idRef.current, raw },
             ...prev.slice(0, 49),
           ]);
         };

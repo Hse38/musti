@@ -4,6 +4,7 @@ urlpatterns = [
     # Sabit yollar önce (boş önekli portal include'undan önce eşleşsin)
     path("competitions/", include("apps.competitions.urls")),
     path("auth/", include("apps.accounts.urls")),
+    path("portal/", include("apps.portal.urls")),
     path("", include("apps.portal.urls")),
     path("sessions/", include("apps.tickets.urls")),
     path("admin/", include("apps.admin_panel.urls")),

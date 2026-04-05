@@ -51,7 +51,10 @@ export default function KaptanPage() {
     fd.append("participant_id", String(sel));
     fd.append("file", file);
     const res = await apiFetch("/captain/upload-invoice/", { method: "POST", body: fd }, "participant");
-    setMsg(res.ok ? "ok" : "err");
+    const d = await res.json().catch(() => ({}));
+    setMsg(
+      res.ok ? "ok" : ((d as { detail?: string }).detail || "err")
+    );
     if (res.ok) setFile(null);
   }
 

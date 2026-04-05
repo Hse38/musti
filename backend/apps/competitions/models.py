@@ -74,6 +74,11 @@ class Participant(models.Model):
     city_from = models.CharField(max_length=100, blank=True, default="")
     city_to = models.CharField(max_length=100, blank=True, default="")
     kys_member_id = models.CharField(max_length=50, blank=True, default="")
+    magic_link_sent_at = models.DateTimeField(null=True, blank=True)
+    first_login_at = models.DateTimeField(null=True, blank=True)
+    transport_selected_at = models.DateTimeField(null=True, blank=True)
+    invoice_uploaded_at = models.DateTimeField(null=True, blank=True)
+    last_activity_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["id"]

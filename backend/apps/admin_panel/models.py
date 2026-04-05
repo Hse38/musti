@@ -23,8 +23,44 @@ class SiteSettings(models.Model):
         max_length=200, default="TEKNOFEST - Giriş Linki"
     )
     magic_link_body = models.TextField(
-        default="Merhaba {name},\n\nGiriş: {link}"
+        default=(
+            "Merhaba {name},\n\n{competition} için giriş linkiniz:\n{link}\n\n"
+            "Son tarih: {deadline}"
+        )
     )
+    invoice_approved_subject = models.CharField(
+        max_length=200, default="Ulaşım Desteği Başvurunuz Onaylandı"
+    )
+    invoice_approved_body = models.TextField(
+        default=(
+            "Sayın {name},\n\n{competition} kapsamındaki ulaşım desteği başvurunuz "
+            "onaylanmıştır.\n\nOnaylanan tutar: {amount} TL\n"
+            "Ödeme açıklaması: {payment_description}\n\n"
+            "Sorularınız: {support_email}"
+        )
+    )
+    invoice_rejected_subject = models.CharField(
+        max_length=200, default="Ulaşım Desteği Başvurunuz Hakkında"
+    )
+    invoice_rejected_body = models.TextField(
+        default=(
+            "Sayın {name},\n\nBaşvurunuz incelendi, aşağıdaki nedenlerle reddedilmiştir:\n"
+            "{reasons}\n\nPortal: {portal_url}"
+        )
+    )
+    reminder_subject = models.CharField(
+        max_length=200,
+        default="TEKNOFEST Ulaşım Desteği — Başvurunuzu Tamamlayın",
+        blank=True,
+    )
+    reminder_body = models.TextField(
+        default=(
+            "Sayın {name},\n\n{competition} için ulaşım desteği başvurunuzu "
+            "henüz tamamlamadınız.\n\nGiriş: {link}\nSon tarih: {deadline}"
+        ),
+        blank=True,
+    )
+    smtp_use_tls = models.BooleanField(default=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def save(self, *args, **kwargs):

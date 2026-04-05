@@ -3,6 +3,17 @@ import json
 from channels.generic.websocket import AsyncWebsocketConsumer
 
 
+def _v3_envelope(payload: dict) -> dict:
+    """Tüm WS mesajlarını {type, data} şekline getirir (geriye dönük uyumluluk)."""
+    if not isinstance(payload, dict):
+        return {"type": "unknown", "data": {"value": payload}}
+    if "data" in payload and isinstance(payload["data"], dict) and "type" in payload:
+        return {"type": str(payload["type"]), "data": payload["data"]}
+    typ = str(payload.get("type", "event"))
+    data = {k: v for k, v in payload.items() if k != "type"}
+    return {"type": typ, "data": data}
+
+
 class AdminNotificationConsumer(AsyncWebsocketConsumer):
     """Admin / süper admin bildirim kanalı (JWT doğrulama üretimde eklenmeli)."""
 
@@ -14,7 +25,8 @@ class AdminNotificationConsumer(AsyncWebsocketConsumer):
         await self.channel_layer.group_discard("admin_notifications", self.channel_name)
 
     async def admin_notify(self, event):
-        await self.send(text_data=json.dumps(event.get("payload", {})))
+        raw = event.get("payload") or {}
+        await self.send(text_data=json.dumps(_v3_envelope(raw)))
 
 
 class ParticipantStatusConsumer(AsyncWebsocketConsumer):
@@ -30,7 +42,8 @@ class ParticipantStatusConsumer(AsyncWebsocketConsumer):
         await self.channel_layer.group_discard(self.group, self.channel_name)
 
     async def status_update(self, event):
-        await self.send(text_data=json.dumps(event.get("payload", {})))
+        raw = event.get("payload") or {}
+        await self.send(text_data=json.dumps(_v3_envelope(raw)))
 
 
 def broadcast_admin_sync(payload: dict):

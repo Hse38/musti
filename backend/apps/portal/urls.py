@@ -10,6 +10,8 @@ urlpatterns = [
     path("me/status/", views.MeStatusView.as_view()),
     path("transport/select/", views.TransportSelectView.as_view()),
     path("transport/details/", views.TransportDetailsView.as_view()),
+    path("transport/plane-details/", views.TransportPlaneDetailsView.as_view()),
+    path("transport/invoice-details/", views.TransportInvoiceDetailsView.as_view()),
     path("invoices/upload/", views.InvoiceUploadView.as_view()),
     path("invoices/", views.InvoiceListView.as_view()),
     path("faq/ask/", views.FAQAskView.as_view()),

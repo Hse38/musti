@@ -9,11 +9,27 @@ urlpatterns = [
     path("rules/<int:pk>/", views.RulePatchView.as_view(), name="admin-rule-patch"),
     path("modules/", views.ModuleListView.as_view(), name="admin-modules"),
     path("modules/<str:name>/", views.ModulePatchView.as_view(), name="admin-module-patch"),
+    path("participants/", views.ParticipantsListView.as_view(), name="admin-participants-list"),
+    path(
+        "participants/<int:pk>/resend-link/",
+        mega_views.ParticipantResendMagicView.as_view(),
+        name="admin-participant-resend-link",
+    ),
     path("competitions/", views.CompetitionListCreateView.as_view(), name="admin-competitions"),
     path(
         "competitions/<int:pk>/",
         views.CompetitionDetailView.as_view(),
         name="admin-competition-detail",
+    ),
+    path(
+        "competitions/<int:pk>/send-magic-links/",
+        mega_views.CompetitionSendMagicLinksView.as_view(),
+        name="admin-competition-send-magic",
+    ),
+    path(
+        "competitions/<int:pk>/send-reminder/",
+        mega_views.CompetitionSendReminderView.as_view(),
+        name="admin-competition-send-reminder",
     ),
     path(
         "competitions/<int:competition_id>/teams/",
@@ -76,6 +92,28 @@ urlpatterns = [
         name="admin-language-auto-translate",
     ),
     path("reports/flights/", mega_views.AdminFlightReportView.as_view(), name="admin-report-flights"),
+    path("reports/result/", mega_views.AdminResultReportView.as_view(), name="admin-report-result"),
+    path(
+        "reports/payment/",
+        mega_views.AdminPaymentReportView.as_view(),
+        name="admin-report-payment",
+    ),
+    path(
+        "reports/tracking/",
+        mega_views.AdminTrackingReportView.as_view(),
+        name="admin-report-tracking",
+    ),
+    path("invoices/", mega_views.AdminInvoiceListView.as_view(), name="admin-invoices-list"),
+    path(
+        "invoices/<int:pk>/approve/",
+        mega_views.AdminInvoiceApproveView.as_view(),
+        name="admin-invoice-approve",
+    ),
+    path(
+        "invoices/<int:pk>/reject/",
+        mega_views.AdminInvoiceRejectView.as_view(),
+        name="admin-invoice-reject",
+    ),
     path(
         "invoices/<int:pk>/status/",
         mega_views.AdminInvoiceManualReviewView.as_view(),

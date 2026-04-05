@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import Image from "next/image";
+import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { LocaleSwitcher } from "@/components/layout/locale-switcher";
@@ -40,6 +41,7 @@ export function LoginHub() {
   const tLogin = useTranslations("Login");
   const tAdmin = useTranslations("Admin");
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [mode, setMode] = useState<HubMode>("menu");
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -53,16 +55,32 @@ export function LoginHub() {
   const [email, setEmail] = useState("");
   const [magicToken, setMagicToken] = useState("");
 
+  useEffect(() => {
+    const tok = searchParams.get("magic_token");
+    if (tok) {
+      setMagicToken(tok);
+      setMode("magic");
+    }
+  }, [searchParams]);
+
   async function onParticipantSubmit(e: React.FormEvent) {
     e.preventDefault();
     setErr(null);
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/auth/login/`, {
+      const body = JSON.stringify({ tc_id: tc, team_id: teamId });
+      let res = await fetch(`${API_BASE}/auth/participant-login/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tc_id: tc, team_id: teamId }),
+        body,
       });
+      if (!res.ok) {
+        res = await fetch(`${API_BASE}/portal/auth/login/`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body,
+        });
+      }
       const data = await res.json();
       if (!res.ok) {
         setErr((data as { detail?: string }).detail || tLogin("error"));
@@ -82,11 +100,18 @@ export function LoginHub() {
     setErr(null);
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/auth/jwt/login/`, {
+      let res = await fetch(`${API_BASE}/auth/login/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
       });
+      if (!res.ok) {
+        res = await fetch(`${API_BASE}/auth/jwt/login/`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, password }),
+        });
+      }
       const data = await res.json();
       if (!res.ok) {
         setErr(t("adminError"));

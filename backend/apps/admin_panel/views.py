@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.db import models
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.authentication import SessionAuthentication
@@ -345,7 +346,12 @@ class AuditLogListView(AdminAuthMixin, APIView):
 
 class AdminDashboardView(AdminAuthMixin, APIView):
     def get(self, request):
+        from decimal import Decimal
+
+        from apps.audit.models import AuditLog
+        from apps.invoices.models import Invoice
         from apps.tickets.models import AnalysisSession
+        from apps.transport.models import TransportRequest
         from core.module_registry import ModuleRegistry
 
         sessions = AnalysisSession.objects.all()
@@ -375,6 +381,29 @@ class AdminDashboardView(AdminAuthMixin, APIView):
                     "health": m.health_check(),
                 }
             )
+
+        p_all = Participant.objects.count()
+        p_logged = Participant.objects.exclude(first_login_at__isnull=True).count()
+        p_plane = TransportRequest.objects.filter(transport_type="plane").count()
+        p_bus_train = TransportRequest.objects.filter(transport_type__in=("bus", "train")).count()
+        inv_qs = Invoice.objects.all()
+        inv_pending = inv_qs.filter(status__in=("pending", "manual_review")).count()
+        inv_ok = inv_qs.filter(status="approved").count()
+        inv_bad = inv_qs.filter(status="rejected").count()
+        amt = sum(
+            (x.ai_extracted_amount or Decimal(0)) for x in inv_qs.filter(status="approved")
+        )
+
+        activities = []
+        for log in AuditLog.objects.order_by("-created_at")[:10]:
+            activities.append(
+                {
+                    "type": log.action,
+                    "message": f"{log.action} — {log.target_type} #{log.target_id}",
+                    "created_at": log.created_at.isoformat(),
+                }
+            )
+
         return Response(
             {
                 "totals": {
@@ -382,6 +411,15 @@ class AdminDashboardView(AdminAuthMixin, APIView):
                     "approved_submissions": subs_approved,
                     "rejected_submissions": subs_rejected,
                     "active_modules": active_modules,
+                    "participants_total": p_all,
+                    "participants_logged_in": p_logged,
+                    "participants_not_logged_in": max(0, p_all - p_logged),
+                    "transport_plane": p_plane,
+                    "transport_bus_train": p_bus_train,
+                    "invoices_pending": inv_pending,
+                    "invoices_approved": inv_ok,
+                    "invoices_rejected": inv_bad,
+                    "approved_amount_tl": str(amt),
                 },
                 "recent_sessions": [
                     {
@@ -392,9 +430,77 @@ class AdminDashboardView(AdminAuthMixin, APIView):
                     }
                     for s in last5
                 ],
+                "activities": activities,
                 "health": {"database": db_ok, "modules": mod_health},
             }
         )
+
+
+class ParticipantsListView(AdminAuthMixin, APIView):
+    """GET /admin/participants/?view=team|flat&competition=&search="""
+
+    def get(self, request):
+        from apps.transport.models import TransportRequest
+
+        view_mode = (request.query_params.get("view") or "flat").lower()
+        comp_id = request.query_params.get("competition")
+        search = (request.query_params.get("search") or "").strip().lower()
+        qs = Participant.objects.select_related("team", "team__competition").order_by(
+            "team_id", "id"
+        )
+        if comp_id:
+            qs = qs.filter(team__competition_id=comp_id)
+        if search:
+            qs = qs.filter(
+                models.Q(full_name__icontains=search) | models.Q(tc_id__icontains=search)
+            )
+
+        if view_mode == "team":
+            teams = {}
+            for p in qs:
+                tid = p.team_id
+                if tid not in teams:
+                    teams[tid] = {
+                        "team_id": tid,
+                        "team_name": p.team.name if p.team else "",
+                        "participants": [],
+                    }
+                tr = TransportRequest.objects.filter(participant=p).first()
+                inv = tr.invoices.order_by("-id").first() if tr else None
+                status_txt = "Bekliyor"
+                if inv:
+                    status_txt = inv.get_status_display()
+                elif p.first_login_at:
+                    status_txt = "Giriş yaptı"
+                teams[tid]["participants"].append(
+                    {
+                        "id": p.id,
+                        "full_name": p.full_name,
+                        "tc_id": p.tc_id,
+                        "transport_type": p.get_transport_type_display(),
+                        "status": status_txt,
+                        "is_captain": p.is_captain,
+                    }
+                )
+            return Response(list(teams.values()))
+
+        out = []
+        for p in qs[:2000]:
+            tr = TransportRequest.objects.filter(participant=p).first()
+            inv = tr.invoices.order_by("-id").first() if tr else None
+            out.append(
+                {
+                    "id": p.id,
+                    "full_name": p.full_name,
+                    "tc_id": p.tc_id,
+                    "team_name": p.team.name if p.team else "",
+                    "competition": p.team.competition.name if p.team else "",
+                    "transport_type": p.get_transport_type_display(),
+                    "invoice_status": inv.get_status_display() if inv else "—",
+                    "first_login_at": p.first_login_at.isoformat() if p.first_login_at else None,
+                }
+            )
+        return Response(out)
 
 
 class TeamDetailView(AdminAuthMixin, APIView):
